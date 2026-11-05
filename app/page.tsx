@@ -3,7 +3,6 @@ import { exigirUsuario } from "@/lib/auth";
 import { escopoEmpresas, listarEstacoes } from "@/lib/consultas";
 import { bytes, diasDesde, numero } from "@/lib/formato";
 import { SeloColeta } from "./componentes";
-import { AGENTE_VERSAO } from "@/lib/versao";
 
 export const dynamic = "force-dynamic";
 
@@ -39,20 +38,8 @@ export default async function Painel() {
 
   return (
     <>
-      <div className="acoes" style={{ justifyContent: "space-between", alignItems: "flex-start" }}>
-        <div>
-          <h1>Painel</h1>
-          <p className="sub">{numero(estacoes.length)} estações em {empresas.length} empresa(s)</p>
-        </div>
-        <div className="cartao" style={{ padding: "12px 16px", marginBottom: 18 }}>
-          <div className="rot muted" style={{ fontSize: 12, marginBottom: 8 }}>AGENTE DE INVENTÁRIO · versão {AGENTE_VERSAO}</div>
-          <div className="acoes">
-            <a className="botao" href="/downloads/agente-inventario.exe" download>Baixar agente (.exe)</a>
-            <a className="botao sec" href="/downloads/coletar-agora.bat" download>coletar-agora.bat</a>
-            {!!u.admin && <a className="botao sec" href="/admin/empresas">Instaladores por empresa</a>}
-          </div>
-        </div>
-      </div>
+      <h1>Painel</h1>
+      <p className="sub">{numero(estacoes.length)} estações em {empresas.length} empresa(s)</p>
 
       <div className="tabela">
         <table>
