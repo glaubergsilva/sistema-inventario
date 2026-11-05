@@ -7,6 +7,7 @@ import { bytes, data, dataHora, numero } from "@/lib/formato";
 import { BarraUso, SeloColeta } from "../../componentes";
 import { excluirEstacao, moverEstacao, salvarObservacoes } from "../../actions";
 import { ListaProgramas } from "./programas";
+import { ListaPastas } from "./pastas";
 
 export const dynamic = "force-dynamic";
 
@@ -29,9 +30,12 @@ export default async function Estacao({ params, searchParams }: {
   const rede: any[] = json(det?.rede_json);
   const programas: any[] = json(det?.programas_json);
   const desktop: any[] = json(det?.desktop_json);
+  const docRow = await first<{ documentos_json: string }>("SELECT documentos_json FROM estacao_documentos WHERE estacao_id = ?", [s.id]);
+  const documentos: any[] = json(docRow?.documentos_json);
   const erros: string[] = json(det?.erros_json);
 
-  const abas = [["resumo", "Resumo"], ["programas", `Programas (${programas.length})`], ["area-de-trabalho", `Área de trabalho (${numero(s.desktop_arquivos)})`]];
+  const abas = [["resumo", "Resumo"], ["programas", `Programas (${programas.length})`], ["area-de-trabalho", `Área de trabalho (${numero(s.desktop_arquivos)})`],
+    ["documentos", `Documentos (${s.documentos_coleta ? numero(s.documentos_arquivos) : "—"})`]];
 
   return (
     <>
@@ -143,48 +147,15 @@ export default async function Estacao({ params, searchParams }: {
 
       {aba === "programas" && <ListaProgramas programas={programas} />}
 
-      {aba === "area-de-trabalho" && (
-        <>
-          {desktop.length === 0 && <div className="cartao muted">Nenhuma área de trabalho encontrada nesta estação.</div>}
-          {desktop.map((d, i) => (
-            <div className="cartao" key={i}>
-              <div className="acoes" style={{ justifyContent: "space-between", marginBottom: 10 }}>
-                <div>
-                  <h2 style={{ margin: 0 }}>{d.usuario}</h2>
-                  <div className="muted"><code>{d.caminho}</code></div>
-                </div>
-                <div className="acoes">
-                  {d.redirecionada
-                    ? <span className="selo ok">Redirecionada para a rede</span>
-                    : <>
-                        <span className="selo neutro">{numero(d.total_arquivos)} arquivos</span>
-                        <span className="selo neutro">{numero(d.total_pastas)} pastas</span>
-                        <span className="selo neutro">{bytes(d.total_bytes)}</span>
-                      </>}
-                </div>
-              </div>
-              {d.truncado && <div className="aviso">A lista foi limitada; os totais consideram todos os arquivos.</div>}
-              {(d.itens ?? []).length > 0 ? (
-                <table className="arvore">
-                  <thead><tr><th>Nome</th><th className="num">Tamanho</th><th>Modificado em</th></tr></thead>
-                  <tbody>{d.itens.map((it: any, j: number) => {
-                    const partes = String(it.caminho).split("/");
-                    return (
-                      <tr key={j}>
-                        <td style={{ paddingLeft: 10 + (partes.length - 1) * 22 }}>
-                          <span className="ico">{it.pasta ? "📁" : "📄"}</span>{partes[partes.length - 1]}
-                          {it.pasta && <span className="muted"> · {numero(it.arquivos)} arquivo(s)</span>}
-                        </td>
-                        <td className="num">{bytes(it.bytes)}</td>
-                        <td>{dataHora(it.modificado_em)}</td>
-                      </tr>
-                    );
-                  })}</tbody>
-                </table>
-              ) : !d.redirecionada && <p className="muted">Área de trabalho vazia.</p>}
-            </div>
-          ))}
-        </>
+      {aba === "area-de-trabalho" && <ListaPastas pastas={desktop} nome="Área de trabalho" />}
+
+      {aba === "documentos" && (
+        s.documentos_coleta
+          ? <>
+              <p className="muted">Pasta Documentos varrida em {dataHora(s.documentos_coleta)} (a varredura de Documentos é feita 1 vez por dia).</p>
+              <ListaPastas pastas={documentos} nome="Documentos" />
+            </>
+          : <div className="cartao muted">Ainda não há dados da pasta Documentos. Ela é coletada a partir do agente 1.1.0, 1 vez por dia — ou na hora com <code>agente-inventario.exe coletar -enviar</code>.</div>
       )}
     </>
   );

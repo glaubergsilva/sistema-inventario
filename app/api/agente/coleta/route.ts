@@ -7,6 +7,23 @@ export const dynamic = "force-dynamic";
 const s = (v: unknown, max = 500) => (typeof v === "string" ? v.slice(0, max) : v == null ? null : String(v).slice(0, max));
 const n = (v: unknown) => (typeof v === "number" && isFinite(v) ? Math.round(v) : 0);
 
+/** D1 limita cada linha a ~2 MB: reduz as listas de itens se necessário (os totais continuam completos). */
+function jsonLimitado(pastas: any[]) {
+  let json = JSON.stringify(pastas);
+  while (json.length > 1_400_000) {
+    for (const d of pastas) {
+      if (Array.isArray(d.itens) && d.itens.length > 50) {
+        d.itens = d.itens.slice(0, Math.floor(d.itens.length * 0.7));
+        d.truncado = true;
+      }
+    }
+    const novo = JSON.stringify(pastas);
+    if (novo.length === json.length) break;
+    json = novo;
+  }
+  return json;
+}
+
 export async function POST(req: Request) {
   const token = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "").trim();
   if (!token) return Response.json({ erro: "token ausente" }, { status: 401 });
@@ -65,19 +82,7 @@ export async function POST(req: Request) {
     id = r.lastId;
   }
 
-  // D1 limita cada linha a ~2 MB: reduz a lista de itens da área de trabalho se necessário
-  let desktopJson = JSON.stringify(desktop);
-  while (desktopJson.length > 1_400_000) {
-    for (const d of desktop) {
-      if (Array.isArray(d.itens) && d.itens.length > 50) {
-        d.itens = d.itens.slice(0, Math.floor(d.itens.length * 0.7));
-        d.truncado = true;
-      }
-    }
-    const novo = JSON.stringify(desktop);
-    if (novo.length === desktopJson.length) break;
-    desktopJson = novo;
-  }
+  const desktopJson = jsonLimitado(desktop);
 
   const hardware = { ...hw, so, discos_fisicos: c.discos_fisicos ?? [], hostname: c.hostname, dominio: c.dominio, coletado_em: c.coletado_em };
   await run(
@@ -89,6 +94,20 @@ export async function POST(req: Request) {
     [id, JSON.stringify(hardware), JSON.stringify(discos), JSON.stringify(rede), JSON.stringify(programas),
       desktopJson, JSON.stringify(c.erros ?? [])],
   );
+
+  // Documentos: o agente só envia quando varreu neste ciclo (padrão 1x/dia); senão mantém a última
+  if (Array.isArray(c.documentos)) {
+    const docs: any[] = c.documentos;
+    await run(
+      `INSERT INTO estacao_documentos (estacao_id, documentos_json) VALUES (?,?)
+       ON CONFLICT(estacao_id) DO UPDATE SET documentos_json=excluded.documentos_json`,
+      [id, jsonLimitado(docs)],
+    );
+    await run(
+      "UPDATE estacoes SET documentos_arquivos=?, documentos_bytes=?, documentos_coleta=datetime('now') WHERE id=?",
+      [docs.reduce((a, d) => a + n(d.total_arquivos), 0), docs.reduce((a, d) => a + n(d.total_bytes), 0), id],
+    );
+  }
 
   return Response.json({ ok: true, estacao_id: id });
 }

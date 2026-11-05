@@ -1,6 +1,11 @@
 import { query } from "./db";
 
-export type FiltrosAT = { ids: number[]; ext?: string; dias?: string; minMb?: string; q?: string };
+export type PastaRelatorio = "area" | "documentos";
+export type FiltrosAT = { ids: number[]; pasta?: PastaRelatorio; ext?: string; dias?: string; minMb?: string; q?: string };
+
+export function pastaDoParametro(v?: string | null): PastaRelatorio {
+  return v === "documentos" ? "documentos" : "area";
+}
 
 export type ArquivoAT = {
   estacao_id: number; hostname: string; empresa: string; usuario: string; caminhoBase: string;
@@ -14,9 +19,11 @@ export type ResumoAT = {
 
 export async function relatorioAreaTrabalho(f: FiltrosAT) {
   if (!f.ids.length) return { resumo: [] as ResumoAT[], arquivos: [] as ArquivoAT[] };
-  const linhas = await query<{ id: number; hostname: string; empresa: string; desktop_json: string }>(
-    `SELECT s.id, s.hostname, e.nome AS empresa, d.desktop_json FROM estacoes s
-     JOIN empresas e ON e.id = s.empresa_id JOIN estacao_detalhes d ON d.estacao_id = s.id
+  const fonte = f.pasta === "documentos"
+    ? "d.documentos_json AS dados FROM estacoes s JOIN empresas e ON e.id = s.empresa_id JOIN estacao_documentos d ON d.estacao_id = s.id"
+    : "d.desktop_json AS dados FROM estacoes s JOIN empresas e ON e.id = s.empresa_id JOIN estacao_detalhes d ON d.estacao_id = s.id";
+  const linhas = await query<{ id: number; hostname: string; empresa: string; dados: string }>(
+    `SELECT s.id, s.hostname, e.nome AS empresa, ${fonte}
      WHERE s.empresa_id IN (${f.ids.map(() => "?").join(",")})`, f.ids);
 
   const exts = (f.ext || "").split(/[,;\s]+/).map((e) => e.trim().replace(/^\./, "").toLowerCase()).filter(Boolean);
@@ -30,7 +37,7 @@ export async function relatorioAreaTrabalho(f: FiltrosAT) {
 
   for (const l of linhas) {
     let areas: any[] = [];
-    try { areas = JSON.parse(l.desktop_json || "[]") || []; } catch { /* ignora */ }
+    try { areas = JSON.parse(l.dados || "[]") || []; } catch { /* ignora */ }
     for (const a of areas) {
       const r: ResumoAT = {
         estacao_id: l.id, hostname: l.hostname, empresa: l.empresa, usuario: a.usuario, redirecionada: !!a.redirecionada,

@@ -29,6 +29,8 @@ export default async function Painel() {
       discoCritico: lista.filter((s) => s.disco_total_bytes && (s.disco_livre_bytes / s.disco_total_bytes) < 0.1).length,
       desktopArq: lista.reduce((a, s) => a + (s.desktop_arquivos || 0), 0),
       desktopBytes: lista.reduce((a, s) => a + (s.desktop_bytes || 0), 0),
+      docsArq: lista.reduce((a, s) => a + (s.documentos_arquivos || 0), 0),
+      docsBytes: lista.reduce((a, s) => a + (s.documentos_bytes || 0), 0),
     };
   });
   const topDesktop = [...estacoes].sort((a, b) => (b.desktop_arquivos || 0) - (a.desktop_arquivos || 0)).filter((s) => s.desktop_arquivos > 0).slice(0, 10);
@@ -41,7 +43,7 @@ export default async function Painel() {
 
       <div className="tabela">
         <table>
-          <thead><tr><th>Empresa</th><th className="num">Estações</th><th className="num">Sem coleta &gt; 7 dias</th><th className="num">Disco &gt; 90%</th><th className="num">Arquivos na área de trabalho</th><th className="num">Volume na área de trabalho</th></tr></thead>
+          <thead><tr><th>Empresa</th><th className="num">Estações</th><th className="num">Sem coleta &gt; 7 dias</th><th className="num">Disco &gt; 90%</th><th className="num">Área de trabalho</th><th className="num">Documentos</th></tr></thead>
           <tbody>
             {porEmpresa.map((e) => (
               <tr key={e.id}>
@@ -49,8 +51,8 @@ export default async function Painel() {
                 <td className="num">{numero(e.total)}</td>
                 <td className="num">{e.desatualizadas ? <span className="selo alerta">{e.desatualizadas}</span> : 0}</td>
                 <td className="num">{e.discoCritico ? <span className="selo perigo">{e.discoCritico}</span> : 0}</td>
-                <td className="num"><Link href={`/relatorios/area-de-trabalho?empresa=${e.id}`}>{numero(e.desktopArq)}</Link></td>
-                <td className="num">{bytes(e.desktopBytes)}</td>
+                <td className="num"><Link href={`/relatorios/area-de-trabalho?empresa=${e.id}`}>{numero(e.desktopArq)} arq.</Link> · {bytes(e.desktopBytes)}</td>
+                <td className="num"><Link href={`/relatorios/area-de-trabalho?pasta=documentos&empresa=${e.id}`}>{numero(e.docsArq)} arq.</Link> · {bytes(e.docsBytes)}</td>
               </tr>
             ))}
           </tbody>

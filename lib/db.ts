@@ -45,6 +45,12 @@ async function executar(sql: string, params: Param[] = []) {
   return { rows: [] as Row[], changes: Number(r.changes), lastId: Number(r.lastInsertRowid) };
 }
 
+const MIGRACOES = [
+  "ALTER TABLE estacoes ADD COLUMN documentos_arquivos INTEGER",
+  "ALTER TABLE estacoes ADD COLUMN documentos_bytes INTEGER",
+  "ALTER TABLE estacoes ADD COLUMN documentos_coleta TEXT",
+];
+
 let esquemaPronto: Promise<void> | null = null;
 function garantirEsquema() {
   if (!esquemaPronto) {
@@ -53,6 +59,10 @@ function garantirEsquema() {
         .split("\n").filter((l) => !l.trim().startsWith("--")).join("\n");
       for (const st of sql.split(";").map((s) => s.trim()).filter(Boolean)) {
         await executar(st);
+      }
+      // migrações de bancos criados em versões anteriores (erro = coluna já existe)
+      for (const m of MIGRACOES) {
+        try { await executar(m); } catch { /* já aplicada */ }
       }
     })().catch((e) => { esquemaPronto = null; throw e; });
   }

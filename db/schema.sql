@@ -47,6 +47,9 @@ CREATE TABLE IF NOT EXISTS estacoes (
   programas_qtd     INTEGER,
   desktop_arquivos  INTEGER,
   desktop_bytes     INTEGER,
+  documentos_arquivos INTEGER,
+  documentos_bytes    INTEGER,
+  documentos_coleta   TEXT,
   versao_agente     TEXT,
   primeira_coleta   TEXT NOT NULL DEFAULT (datetime('now')),
   ultima_coleta     TEXT NOT NULL DEFAULT (datetime('now')),
@@ -63,4 +66,10 @@ CREATE TABLE IF NOT EXISTS estacao_detalhes (
   programas_json  TEXT,
   desktop_json    TEXT,
   erros_json      TEXT
+);
+
+-- Última varredura da pasta Documentos (feita em intervalo próprio, padrão 24h)
+CREATE TABLE IF NOT EXISTS estacao_documentos (
+  estacao_id      INTEGER PRIMARY KEY REFERENCES estacoes(id) ON DELETE CASCADE,
+  documentos_json TEXT
 );

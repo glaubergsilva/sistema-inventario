@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { exigirUsuario } from "@/lib/auth";
 import { escopoEmpresas } from "@/lib/consultas";
-import { relatorioAreaTrabalho } from "@/lib/relatorio";
+import { pastaDoParametro, relatorioAreaTrabalho } from "@/lib/relatorio";
 import { bytes, dataHora, numero } from "@/lib/formato";
 import { FiltroEmpresa } from "../../componentes";
 
@@ -13,7 +13,10 @@ export default async function RelatorioAreaTrabalho({ searchParams }: { searchPa
   const sp = await searchParams;
   const u = await exigirUsuario();
   const { empresas, ids } = await escopoEmpresas(u, sp.empresa);
-  const { resumo, arquivos } = await relatorioAreaTrabalho({ ids, ext: sp.ext, dias: sp.dias, minMb: sp.min_mb, q: sp.q });
+  const pasta = pastaDoParametro(sp.pasta);
+  const nomePasta = pasta === "documentos" ? "Documentos" : "Área de trabalho";
+  const aba = pasta === "documentos" ? "documentos" : "area-de-trabalho";
+  const { resumo, arquivos } = await relatorioAreaTrabalho({ ids, pasta, ext: sp.ext, dias: sp.dias, minMb: sp.min_mb, q: sp.q });
 
   const qs = new URLSearchParams(Object.entries(sp).filter(([, v]) => v) as [string, string][]).toString();
   const totalBytes = arquivos.reduce((a, x) => a + x.bytes, 0);
@@ -22,10 +25,17 @@ export default async function RelatorioAreaTrabalho({ searchParams }: { searchPa
 
   return (
     <>
-      <h1>Arquivos na área de trabalho</h1>
-      <p className="sub">Arquivos salvos localmente na área de trabalho dos usuários, em vez da rede. Atalhos (.lnk/.url) são ignorados; apenas nome, tamanho e data são coletados.</p>
+      <h1>Arquivos locais dos usuários</h1>
+      <p className="sub">Arquivos salvos na própria máquina em vez da rede. Atalhos (.lnk/.url) são ignorados; apenas nome, tamanho e data são coletados.</p>
+
+      <nav className="abas">
+        <Link href="?pasta=area" className={pasta === "area" ? "ativa" : ""}>Área de trabalho</Link>
+        <Link href="?pasta=documentos" className={pasta === "documentos" ? "ativa" : ""}>Documentos</Link>
+      </nav>
+      {pasta === "documentos" && <p className="muted" style={{ marginTop: -8 }}>A pasta Documentos é varrida 1 vez por dia (agente 1.1.0 ou superior).</p>}
 
       <form className="filtros">
+        <input type="hidden" name="pasta" value={pasta} />
         <FiltroEmpresa empresas={empresas} valor={sp.empresa} />
         <label>Extensões<input name="ext" defaultValue={sp.ext} placeholder="xlsx, docx, pdf" style={{ width: 150 }} /></label>
         <label>Modificados nos últimos
@@ -43,17 +53,17 @@ export default async function RelatorioAreaTrabalho({ searchParams }: { searchPa
       <div className="grade">
         <div className="indicador"><div className="rot">Arquivos encontrados</div><div className="val">{numero(arquivos.length)}</div><div className="det">{bytes(totalBytes)}</div></div>
         <div className="indicador"><div className="rot">Usuários com arquivos</div><div className="val">{numero(usuariosComArquivos)}</div><div className="det">de {numero(resumo.length)} perfis com conteúdo</div></div>
-        <div className="indicador"><div className="rot">Áreas redirecionadas p/ rede</div><div className="val">{numero(redirecionadas)}</div><div className="det">via GPO (conforme)</div></div>
+        <div className="indicador"><div className="rot">Áreas redirecionadas p/ rede</div><div className="val">{numero(redirecionadas)}</div><div className="det">{nomePasta} via GPO (conforme)</div></div>
       </div>
 
       <h2>Por usuário</h2>
       <div className="tabela">
         <table>
-          <thead><tr><th>Estação</th><th>Usuário</th><th>Empresa</th><th className="num">Arquivos (filtro)</th><th className="num">Volume (filtro)</th><th className="num">Total na área de trabalho</th><th>Modificação mais recente</th></tr></thead>
+          <thead><tr><th>Estação</th><th>Usuário</th><th>Empresa</th><th className="num">Arquivos (filtro)</th><th className="num">Volume (filtro)</th><th className="num">Total na pasta</th><th>Modificação mais recente</th></tr></thead>
           <tbody>
             {resumo.map((r, i) => (
               <tr key={i}>
-                <td><Link href={`/estacoes/${r.estacao_id}?aba=area-de-trabalho`}>{r.hostname}</Link></td>
+                <td><Link href={`/estacoes/${r.estacao_id}?aba=${aba}`}>{r.hostname}</Link></td>
                 <td>{r.usuario}</td>
                 <td>{r.empresa}</td>
                 <td className="num">{r.redirecionada ? <span className="selo ok">na rede</span> : numero(r.encontrados)}</td>
@@ -75,7 +85,7 @@ export default async function RelatorioAreaTrabalho({ searchParams }: { searchPa
             {arquivos.slice(0, LIMITE_TELA).map((a, i) => (
               <tr key={i}>
                 <td>{a.caminho}</td>
-                <td><Link href={`/estacoes/${a.estacao_id}?aba=area-de-trabalho`}>{a.hostname}</Link> · {a.usuario}</td>
+                <td><Link href={`/estacoes/${a.estacao_id}?aba=${aba}`}>{a.hostname}</Link> · {a.usuario}</td>
                 <td className="num">{bytes(a.bytes)}</td>
                 <td>{dataHora(a.modificado_em)}</td>
               </tr>

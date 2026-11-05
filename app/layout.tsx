@@ -18,7 +18,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <nav>
                 <Link href="/">Painel</Link>
                 <Link href="/estacoes">Estações</Link>
-                <Link href="/relatorios/area-de-trabalho">Área de trabalho</Link>
+                <Link href="/relatorios/area-de-trabalho">Arquivos locais</Link>
                 {!!u.admin && <Link href="/admin/empresas">Empresas</Link>}
                 {!!u.admin && <Link href="/admin/usuarios">Usuários</Link>}
               </nav>

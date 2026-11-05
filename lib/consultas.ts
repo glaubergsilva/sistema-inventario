@@ -6,7 +6,8 @@ export type EstacaoResumo = {
   usuario_logado: string | null; so_nome: string | null; so_versao: string | null; fabricante: string | null;
   modelo: string | null; numero_serie: string | null; cpu: string | null; memoria_bytes: number;
   disco_total_bytes: number; disco_livre_bytes: number; ip: string | null; programas_qtd: number;
-  desktop_arquivos: number; desktop_bytes: number; versao_agente: string | null; primeira_coleta: string;
+  desktop_arquivos: number; desktop_bytes: number; documentos_arquivos: number | null; documentos_bytes: number | null;
+  documentos_coleta: string | null; versao_agente: string | null; primeira_coleta: string;
   ultima_coleta: string; observacoes: string | null;
 };
 

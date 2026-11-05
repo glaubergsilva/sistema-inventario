@@ -141,6 +141,7 @@ export async function excluirEstacao(f: FormData) {
   await exigirAdmin();
   const id = Number(f.get("id"));
   await run("DELETE FROM estacao_detalhes WHERE estacao_id = ?", [id]);
+  await run("DELETE FROM estacao_documentos WHERE estacao_id = ?", [id]);
   await run("DELETE FROM estacoes WHERE id = ?", [id]);
   redirect("/estacoes");
 }
