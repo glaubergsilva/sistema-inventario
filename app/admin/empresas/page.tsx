@@ -1,18 +1,11 @@
-import { headers } from "next/headers";
+import { urlPortal } from "@/lib/url";
+import { AGENTE_VERSAO } from "@/lib/versao";
 import { exigirAdmin } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { data, numero } from "@/lib/formato";
 import { excluirEmpresa, regenerarToken, salvarEmpresa } from "../../actions";
 
 export const dynamic = "force-dynamic";
-
-async function urlPortal() {
-  if (process.env.PORTAL_URL) return process.env.PORTAL_URL.replace(/\/$/, "");
-  const h = await headers();
-  const host = h.get("x-forwarded-host") || h.get("host") || "localhost:3000";
-  const proto = h.get("x-forwarded-proto") || (host.startsWith("localhost") ? "http" : "https");
-  return `${proto}://${host}`;
-}
 
 function comandoInstalacao(url: string, token: string) {
   return [
@@ -61,6 +54,11 @@ export default async function Empresas() {
           <details>
             <summary>Token e comando de instalação do agente</summary>
             <div style={{ marginTop: 10 }}>
+              <div className="acoes" style={{ marginBottom: 14 }}>
+                <a className="botao" href={`/api/empresas/${e.id}/instalador`}>Baixar instalar-agente.bat ({e.nome})</a>
+                <a className="botao sec" href="/downloads/agente-inventario.exe" download>Baixar agente {AGENTE_VERSAO} (.exe)</a>
+                <span className="muted" style={{ fontSize: 12 }}>Coloque os dois na mesma pasta da estação e execute o .bat como administrador.</span>
+              </div>
               <div className="campo" style={{ marginBottom: 10 }}>Token<code style={{ fontSize: 13 }}>{e.token}</code></div>
               <div className="campo">Execute no PowerShell como Administrador na estação:</div>
               <pre>{comandoInstalacao(url, e.token)}</pre>
